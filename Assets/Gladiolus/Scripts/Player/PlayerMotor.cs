@@ -14,27 +14,27 @@ public class PlayerMotor : MonoBehaviour {
 
     public LayerMask PlatformLayers;
 
-    public bool DebugIsGrounded;
-    public bool DebugPlatformFound;
-    public Vector3 DebugJumpVector;
-    public Vector3 DebugFallCancel;
-
     private CharacterController _characterController;
     private PlatformDetector _platformDetector;
 
     private Vector3 _forward;
     private Vector3 _right;
 
-    public Vector3 _offset;
-    public Vector3 _velocity;
-    public Vector3 _acceleration;
-
     public bool _isJumping = false;
+    public bool _isGrounded = false;
 
     public float _platformSlope = 0f;
     public Vector3 _platformOffset;
     public Vector3 _platformNormal;
     public Vector3 _downhill;
+
+    public Vector3 _runVelocity;
+    public Vector3 _jumpVelocity;
+    public Vector3 _slideVelocity;
+    public Vector3 _gravityVelocity;
+    public Vector3 _velocity;
+
+    public bool DebugIsGrounded;
 
 	void Awake() {
         _characterController = GetComponent<CharacterController>();
@@ -48,7 +48,7 @@ public class PlayerMotor : MonoBehaviour {
 
         Move(horizontal, vertical, jump);
     }
-
+    
     void OnControllerColliderHit(ControllerColliderHit hit) {
         if ((PlatformLayers.value & (1 << hit.gameObject.layer)) != 0) {
             // TODO Check if hit on bottom of collider
@@ -63,46 +63,44 @@ public class PlayerMotor : MonoBehaviour {
 
         _forward = new Vector3(Pivot.transform.forward.x, 0f, Pivot.transform.forward.z).normalized;
         _right = new Vector3(Pivot.right.x, 0f, Pivot.right.z).normalized;
-        _offset = RunSpeed * Time.deltaTime * (horizontal * _right + vertical * _forward);
-
-        _acceleration = Vector3.zero;
+        _runVelocity = RunSpeed * (horizontal * _right + vertical * _forward);
 
         if (_characterController.isGrounded) {
-            // Linecast downward to check for platforms
-            platformFound = _platformDetector.CheckForPlatforms(out _platformOffset);
+            // Cancel falling velocity on landing
+            _gravityVelocity = Vector3.zero;
 
-            // Check if platform is shallow enough to stop falling
-            if (_platformSlope < SlideAngle) {
-                // Cancel falling velocity on landing
-                Vector3 fallCancel = Vector3.Dot(_velocity, -Vector3.up) * Vector3.up;
-                DebugFallCancel = fallCancel;
-                _velocity += fallCancel;
+            // Check if platform is steep enough to slide down
+            if (_platformSlope >= SlideAngle) {
+                _slideVelocity += _downhill * Gravity; //Vector3.Dot(-Vector3.up * Gravity, _downhill);
             } else {
-                _acceleration += -transform.up * Gravity;
+                // Cancel sliding on shallow inclines
+                _slideVelocity = Vector3.zero;
             }
 
             // Jump
             if (jump && !_isJumping) {
-                _acceleration = transform.up * JumpSpeed;
-                DebugJumpVector = _acceleration * Time.deltaTime;
+                _jumpVelocity = transform.up * JumpSpeed;
                 _isJumping = true;
             } else {
                 // Attach Player to platform
+                platformFound = _platformDetector.CheckForPlatforms(out _platformOffset);
+
                 if (platformFound) {
-                    _offset += _platformOffset;
+                    _runVelocity += _platformOffset;
                 }
+
+                _jumpVelocity = Vector3.zero;
                 _isJumping = false;
             }
         } else {
-            DebugFallCancel = Vector3.zero;
-            _acceleration += -transform.up * Gravity;
+            _slideVelocity = Vector3.zero;
+            _gravityVelocity += Gravity * -Vector3.up;
         }
 
-        _velocity += _acceleration * Time.deltaTime;
-        _characterController.Move(_velocity + _offset);
+        _velocity = Time.deltaTime * (_runVelocity + _jumpVelocity + _gravityVelocity + _slideVelocity);
+        _characterController.Move(_velocity);
 
         DebugIsGrounded = _characterController.isGrounded;
-        DebugPlatformFound = platformFound;
     }
 
     void OnDrawGizmos() {
