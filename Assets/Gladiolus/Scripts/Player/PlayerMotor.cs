@@ -32,9 +32,14 @@ public class PlayerMotor : MonoBehaviour {
     public Vector3 _jumpVelocity;
     public Vector3 _slideVelocity;
     public Vector3 _gravityVelocity;
+
     public Vector3 _velocity;
+    public Vector3 _offset;
 
     public bool DebugIsGrounded;
+    public bool DebugCollidedSides;
+    public bool DebugCollidedBottom;
+    public bool DebugHit;
 
 	void Awake() {
         _characterController = GetComponent<CharacterController>();
@@ -51,6 +56,7 @@ public class PlayerMotor : MonoBehaviour {
     
     void OnControllerColliderHit(ControllerColliderHit hit) {
         if ((PlatformLayers.value & (1 << hit.gameObject.layer)) != 0) {
+            DebugHit = true;
             // TODO Check if hit on bottom of collider
             _platformNormal = hit.normal;
             _platformSlope = Vector3.Angle(_platformNormal, transform.up);
@@ -64,6 +70,8 @@ public class PlayerMotor : MonoBehaviour {
         _forward = new Vector3(Pivot.transform.forward.x, 0f, Pivot.transform.forward.z).normalized;
         _right = new Vector3(Pivot.right.x, 0f, Pivot.right.z).normalized;
         _runVelocity = RunSpeed * (horizontal * _right + vertical * _forward);
+        _offset = Vector3.zero;
+        DebugHit = false;
 
         if (_characterController.isGrounded) {
             // Cancel falling velocity on landing
@@ -86,21 +94,30 @@ public class PlayerMotor : MonoBehaviour {
                 platformFound = _platformDetector.CheckForPlatforms(out _platformOffset);
 
                 if (platformFound) {
-                    _runVelocity += _platformOffset;
+                    _offset += _platformOffset;
                 }
 
                 _jumpVelocity = Vector3.zero;
                 _isJumping = false;
+
+                // Even while the player is grounded, slightly push it into the ground to trigger the collision event and properly update CharacterController.isGrounded
+                // TODO: Replace this with an internal isGrounded
+                _gravityVelocity = Gravity * -Vector3.up;
             }
+        } else if (_isJumping && (_characterController.collisionFlags & CollisionFlags.Above) != 0) {
+            // Cancel the jump velocity if the player hits their head on a ceiling
+            _jumpVelocity = Vector3.zero;
         } else {
             _slideVelocity = Vector3.zero;
             _gravityVelocity += Gravity * -Vector3.up;
         }
 
-        _velocity = Time.deltaTime * (_runVelocity + _jumpVelocity + _gravityVelocity + _slideVelocity);
+        _velocity = Time.deltaTime * (_runVelocity + _jumpVelocity + _gravityVelocity + _slideVelocity) + _offset;
         _characterController.Move(_velocity);
 
         DebugIsGrounded = _characterController.isGrounded;
+        DebugCollidedSides = (_characterController.collisionFlags & CollisionFlags.CollidedSides) != 0;
+        DebugCollidedBottom = (_characterController.collisionFlags & CollisionFlags.CollidedBelow) != 0;
     }
 
     void OnDrawGizmos() {

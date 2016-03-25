@@ -18,12 +18,12 @@ public class ThirdPersonCamera : MonoBehaviour {
     private float _rotationY;
 
     void Start() {
-        Cursor.visible = false;
+        //Cursor.visible = false;
     }
 
 	// Update is called once per frame
 	void Update () {
-        Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.lockState = CursorLockMode.Locked;
         // Rotate the camera using mouse input
         _mouseDeltaX = Input.GetAxis(INPUT_VIEW_X) * SensitivityX * Time.deltaTime;
         _mouseDeltaY = Input.GetAxis(INPUT_VIEW_Y) * SensitivityY * Time.deltaTime;
