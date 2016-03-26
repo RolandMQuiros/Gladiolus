@@ -11,6 +11,7 @@ public class PlayerMotor : MonoBehaviour {
     public float JumpSpeed = 100f;
     public float Gravity = 9.81f;
     public int SlideAngle = 60;
+    public int CeilingBumpAngle = 25;
 
     public LayerMask PlatformLayers;
 
@@ -27,6 +28,9 @@ public class PlayerMotor : MonoBehaviour {
     public Vector3 _platformOffset;
     public Vector3 _platformNormal;
     public Vector3 _downhill;
+
+    public Vector3 _ceilingNormal;
+    public float _ceilingSlope = 0f;
 
     public Vector3 _runVelocity;
     public Vector3 _jumpVelocity;
@@ -55,27 +59,33 @@ public class PlayerMotor : MonoBehaviour {
     }
     
     void OnControllerColliderHit(ControllerColliderHit hit) {
-        if ((PlatformLayers.value & (1 << hit.gameObject.layer)) != 0) {
+        bool isPlatform = (PlatformLayers.value & (1 << hit.gameObject.layer)) != 0;
+        bool hitBelow = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
+        bool hitAbove = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+
+        if (isPlatform && hitBelow) {
             DebugHit = true;
-            // TODO Check if hit on bottom of collider
             _platformNormal = hit.normal;
-            _platformSlope = Vector3.Angle(_platformNormal, transform.up);
-            _downhill = Vector3.Cross(_platformNormal, Vector3.Cross(_platformNormal, transform.up)).normalized;
+        } else if (hitAbove) {
+            _ceilingNormal = hit.normal;
         }
     }
 
     public void Move(float horizontal, float vertical, bool jump) {
-        bool platformFound = false;
-
+        _offset = Vector3.zero;
         _forward = new Vector3(Pivot.transform.forward.x, 0f, Pivot.transform.forward.z).normalized;
         _right = new Vector3(Pivot.right.x, 0f, Pivot.right.z).normalized;
+        
         _runVelocity = RunSpeed * (horizontal * _right + vertical * _forward);
-        _offset = Vector3.zero;
+        
         DebugHit = false;
-
+        
         if (_characterController.isGrounded) {
-            // Cancel falling velocity on landing
-            _gravityVelocity = Vector3.zero;
+            _platformNormal.Normalize();
+            _runVelocity = Vector3.ProjectOnPlane(_runVelocity, _platformNormal);
+
+            _platformSlope = Vector3.Angle(_platformNormal, transform.up);
+            _downhill = Vector3.Cross(_platformNormal, Vector3.Cross(_platformNormal, transform.up)).normalized;
 
             // Check if platform is steep enough to slide down
             if (_platformSlope >= SlideAngle) {
@@ -85,13 +95,24 @@ public class PlayerMotor : MonoBehaviour {
                 _slideVelocity = Vector3.zero;
             }
 
+            bool isHitAbove = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+
             // Jump
             if (jump && !_isJumping) {
                 _jumpVelocity = transform.up * JumpSpeed;
                 _isJumping = true;
+            } else if (_isJumping && isHitAbove) {
+                _ceilingSlope = Vector3.Angle(_ceilingNormal, -transform.up);
+                if (_ceilingSlope < CeilingBumpAngle) {
+                    // Cancel the jump velocity if the player hits their head on a ceiling
+                    //_jumpVelocity = Vector3.zero;
+                } else {
+                    // Slide along the wall
+                }
+                //_jumpVelocity = Vector3.ProjectOnPlane(_jumpVelocity, _ceilingNormal).normalized * _jumpVelocity.magnitude;
             } else {
                 // Attach Player to platform
-                platformFound = _platformDetector.CheckForPlatforms(out _platformOffset);
+                bool platformFound = _platformDetector.CheckForPlatforms(out _platformOffset);
 
                 if (platformFound) {
                     _offset += _platformOffset;
@@ -104,14 +125,11 @@ public class PlayerMotor : MonoBehaviour {
                 // TODO: Replace this with an internal isGrounded
                 _gravityVelocity = Gravity * -Vector3.up;
             }
-        } else if (_isJumping && (_characterController.collisionFlags & CollisionFlags.Above) != 0) {
-            // Cancel the jump velocity if the player hits their head on a ceiling
-            _jumpVelocity = Vector3.zero;
         } else {
             _slideVelocity = Vector3.zero;
             _gravityVelocity += Gravity * -Vector3.up;
         }
-
+        
         _velocity = Time.deltaTime * (_runVelocity + _jumpVelocity + _gravityVelocity + _slideVelocity) + _offset;
         _characterController.Move(_velocity);
 
@@ -130,5 +148,8 @@ public class PlayerMotor : MonoBehaviour {
 
         Gizmos.color = Color.green;
         Gizmos.DrawLine(transform.position, transform.position + _downhill);
+
+        Gizmos.color = Color.blue;
+        Gizmos.DrawLine(transform.position, transform.position + _ceilingNormal);
     }
 }
