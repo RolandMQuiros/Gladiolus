@@ -195,7 +195,7 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 425066940}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0.09848517, w: 0.9951385}
   m_LocalPosition: {x: -11.266219, y: 5.1907215, z: 13.204662}
   m_LocalScale: {x: 20, y: 1, z: 20}
   m_Children: []
@@ -345,25 +345,17 @@ MonoBehaviour:
   JumpSpeed: 20
   Gravity: 1
   SlideAngle: 60
+  CeilingBumpAngle: 25
   PlatformLayers:
     serializedVersion: 2
     m_Bits: 256
-  _isJumping: 0
-  _isGrounded: 0
-  _platformSlope: 0
-  _platformOffset: {x: 0, y: 0, z: 0}
-  _platformNormal: {x: 0, y: 0, z: 0}
-  _downhill: {x: 0, y: 0, z: 0}
-  _runVelocity: {x: 0, y: 0, z: 0}
-  _jumpVelocity: {x: 0, y: 0, z: 0}
-  _slideVelocity: {x: 0, y: 0, z: 0}
-  _gravityVelocity: {x: 0, y: 0, z: 0}
   _velocity: {x: 0, y: 0, z: 0}
-  _offset: {x: 0, y: 0, z: 0}
+  _jumpingVelocity: {x: 0, y: 0, z: 0}
+  _gravityVelocity: {x: 0, y: 0, z: 0}
+  _floorNormal: {x: 0, y: 0, z: 0}
+  _ceilingNormal: {x: 0, y: 0, z: 0}
   DebugIsGrounded: 0
-  DebugCollidedSides: 0
-  DebugCollidedBottom: 0
-  DebugHit: 0
+  DebugCollisionFlags: 0
 --- !u!114 &1039868880
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -411,7 +403,7 @@ CharacterController:
   m_Radius: 0.5
   m_SlopeLimit: 45
   m_StepOffset: 0.3
-  m_SkinWidth: 0.08
+  m_SkinWidth: 0.1
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1039868883
@@ -420,7 +412,7 @@ MeshRenderer:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1039868878}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_Materials:
@@ -543,7 +535,7 @@ GameObject:
   serializedVersion: 4
   m_Component:
   - 4: {fileID: 1207464115}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Level
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -604,7 +596,7 @@ GameObject:
   - 33: {fileID: 2133625714}
   - 65: {fileID: 2133625713}
   - 23: {fileID: 2133625712}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cube (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
