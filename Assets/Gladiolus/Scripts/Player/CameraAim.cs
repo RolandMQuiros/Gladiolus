@@ -5,6 +5,7 @@ public class CameraAim : MonoBehaviour {
 
     public Transform ViewTransform;
     public Transform AimingTransform;
+    public LayerMask AimLayers;
 
     private Vector3 _hitPoint;
     private Vector3 _direction;

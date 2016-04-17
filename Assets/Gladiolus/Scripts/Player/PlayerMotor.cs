@@ -2,7 +2,6 @@
 using System.Collections;
 
 [RequireComponent(typeof(CharacterController))]
-[RequireComponent(typeof(PlatformDetector))]
 public class PlayerMotor : MonoBehaviour {
     public Transform Pivot;
 
@@ -16,7 +15,6 @@ public class PlayerMotor : MonoBehaviour {
     public LayerMask PlatformLayers;
 
     private CharacterController _characterController;
-    private PlatformDetector _platformDetector;
 
     private Vector3 _forward;
     private Vector3 _right;
@@ -38,12 +36,14 @@ public class PlayerMotor : MonoBehaviour {
 
     public bool DebugIsGrounded;
     public CollisionFlags DebugCollisionFlags;
-    
 
-	void Awake() {
+	void OnEnable() {
         _characterController = GetComponent<CharacterController>();
-        _platformDetector = GetComponent<PlatformDetector>();
 	}
+
+    void Awake() {
+        _characterController = GetComponent<CharacterController>();
+    }
     
     void Update() {
         float horizontal = Input.GetAxis("Horizontal");

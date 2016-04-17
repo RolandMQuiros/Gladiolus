@@ -5,11 +5,15 @@ public class ThirdPersonCamera : MonoBehaviour {
     private const string INPUT_VIEW_X = "View X";
     private const string INPUT_VIEW_Y = "View Y";
 
-    public Transform pivot;
+    public Transform Pivot;
+    public Transform Camera;
 
     public float SensitivityX = 100f;
     public float SensitivityY = 100f;
     public float VerticalLimit = 60f;
+    public float ObstructionPadding = 0.01f;
+
+    public LayerMask ObstructionLayer;
 
     private float _mouseDeltaX;
     private float _mouseDeltaY;
@@ -17,8 +21,14 @@ public class ThirdPersonCamera : MonoBehaviour {
     private float _rotationX;
     private float _rotationY;
 
+    private Vector3 _initialOffset;
+    private Vector3 _offsetDirection;
+    private Vector3 _obstructionPoint;
+
     void Start() {
         //Cursor.visible = false;
+        _initialOffset = Camera.localPosition;
+        _offsetDirection = _initialOffset.normalized;
     }
 
 	// Update is called once per frame
@@ -33,12 +43,25 @@ public class ThirdPersonCamera : MonoBehaviour {
             _rotationY -= _mouseDeltaY;
             _rotationY = Mathf.Clamp(_rotationY, -VerticalLimit, VerticalLimit);
 
-            pivot.rotation = Quaternion.Euler(_rotationY, _rotationX, 0f);
+            Pivot.rotation = Quaternion.Euler(_rotationY, _rotationX, 0f);
         }
-	}
+
+        RaycastHit hitInfo;
+        if (Physics.Linecast(Pivot.position, Pivot.transform.TransformVector(_initialOffset), out hitInfo, ObstructionLayer.value)) {
+            Camera.position = Pivot.position + (hitInfo.distance - ObstructionPadding) * _offsetDirection;
+            _obstructionPoint = hitInfo.point;
+            Debug.Log("hit!");
+        } else {
+            Camera.localPosition = _initialOffset;
+            _obstructionPoint = Camera.position;
+        }
+    }
 
     void OnDrawGizmos() {
-        //Gizmos.color = Color.blue;
-        //Gizmos.DrawLine(pivot.position, pivot.position + pivot.forward);
+        Gizmos.color = Color.blue;
+        Gizmos.DrawLine(Pivot.position, Pivot.transform.TransformVector(_initialOffset));
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(_obstructionPoint, 0.1f);
     }
 }
