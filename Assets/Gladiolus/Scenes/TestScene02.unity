@@ -405,10 +405,11 @@ MonoBehaviour:
   SensitivityX: 100
   SensitivityY: 100
   VerticalLimit: 60
-  ObstructionPadding: 0.01
+  ObstructionPadding: 2.02
   ObstructionLayer:
     serializedVersion: 2
     m_Bits: 768
+  _castPosition: {x: 0, y: 0, z: 0}
 --- !u!114 &1039868881
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -22,13 +22,12 @@ public class ThirdPersonCamera : MonoBehaviour {
     private float _rotationY;
 
     private Vector3 _initialOffset;
-    private Vector3 _offsetDirection;
+    private Vector3 _castPosition;
     private Vector3 _obstructionPoint;
 
     void Start() {
         //Cursor.visible = false;
         _initialOffset = Camera.localPosition;
-        _offsetDirection = _initialOffset.normalized;
     }
 
 	// Update is called once per frame
@@ -47,8 +46,9 @@ public class ThirdPersonCamera : MonoBehaviour {
         }
 
         RaycastHit hitInfo;
-        if (Physics.Linecast(Pivot.position, Pivot.transform.TransformVector(_initialOffset), out hitInfo, ObstructionLayer.value)) {
-            Camera.position = Pivot.position + (hitInfo.distance - ObstructionPadding) * _offsetDirection;
+        _castPosition = Pivot.TransformPoint(_initialOffset);
+        if (Physics.Linecast(Pivot.position, _castPosition, out hitInfo, ObstructionLayer.value)) {
+            Camera.position = hitInfo.point;
             _obstructionPoint = hitInfo.point;
             Debug.Log("hit!");
         } else {
@@ -59,7 +59,7 @@ public class ThirdPersonCamera : MonoBehaviour {
 
     void OnDrawGizmos() {
         Gizmos.color = Color.blue;
-        Gizmos.DrawLine(Pivot.position, Pivot.transform.TransformVector(_initialOffset));
+        Gizmos.DrawLine(Pivot.position, _castPosition);
 
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(_obstructionPoint, 0.1f);

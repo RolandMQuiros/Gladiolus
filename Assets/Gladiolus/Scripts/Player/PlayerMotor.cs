@@ -25,13 +25,17 @@ public class PlayerMotor : MonoBehaviour {
     public Vector3 _jumpingVelocity;
     public Vector3 _gravityVelocity;
 
-    public Vector3 _hitNormal;
+    /// <summary>The normal of any Platform the character controller collides with</summary>
+    public Vector3 _platformNormal;
+    /// <summary>The normal of platforms that collide with the bottom of the character capsule.  Used for sliding the character off steep inclines.</summary>
     public Vector3 _floorNormal;
+    /// <summary>The normal of platforms that collide with the top of the character capsule.  Used to slide the character off shallow ceiling angles when moving upward.</summary>
     public Vector3 _ceilingNormal;
-
+    /// <summary>Unit vector pointing down the plane the character stands on.  This is the direction the character will slide down if the incline is past a steepness threshold.</summary>
     public Vector3 _downhill;
-
+    /// <summary>The angle of the floor, in degrees</summary>
     public float _floorAngle;
+    /// <summary>The angle of the ceiling, in degrees</summary>
     public float _ceilingAngle;
 
     public bool DebugIsGrounded;
@@ -45,6 +49,7 @@ public class PlayerMotor : MonoBehaviour {
         _characterController = GetComponent<CharacterController>();
     }
     
+    // TODO: Move this to PlayerController
     void Update() {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
@@ -66,7 +71,7 @@ public class PlayerMotor : MonoBehaviour {
                 _ceilingNormal = hit.normal;
             }
 
-            _hitNormal = hit.normal;
+            _platformNormal = hit.normal;
         }
     }
 
@@ -109,7 +114,7 @@ public class PlayerMotor : MonoBehaviour {
 
         bool isHit = _characterController.collisionFlags != 0;
         if (isHit) {
-            _velocity = Vector3.ProjectOnPlane(_velocity, _hitNormal);
+            _velocity = Vector3.ProjectOnPlane(_velocity, _platformNormal);
         }
 
         DebugIsGrounded = _characterController.isGrounded;
@@ -125,7 +130,7 @@ public class PlayerMotor : MonoBehaviour {
         Gizmos.color = Color.cyan;
         Gizmos.DrawLine(feet, feet + _floorNormal);
         Gizmos.DrawLine(head, head + _ceilingNormal);
-        Gizmos.DrawLine(transform.position, transform.position + _hitNormal);
+        Gizmos.DrawLine(transform.position, transform.position + _platformNormal);
 
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + _velocity);
