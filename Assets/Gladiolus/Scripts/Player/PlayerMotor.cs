@@ -53,9 +53,6 @@ public class PlayerMotor : MonoBehaviour {
 
     private Color _characterSkinGizmoColor = new Color(0.2f, 0.8f, 0.3f);
 
-    public bool DebugIsGrounded;
-    public bool DebugIsCeilingd;
-
 	void OnEnable() {
         _characterController = GetComponent<CharacterController>();
 	}
@@ -73,10 +70,6 @@ public class PlayerMotor : MonoBehaviour {
         Move(horizontal, vertical, jump);
     }
 
-    void LateUpdate() {
-        _characterController.Move(_velocity * Time.deltaTime + _offset);
-    }
-
     void OnControllerColliderHit(ControllerColliderHit hit) {
         // Note: CollisionFlags aren't updated at the point OnControllerColliderHit is called, so
         // assigning the IsTouching variables here leads to inconsistent behavior
@@ -90,6 +83,7 @@ public class PlayerMotor : MonoBehaviour {
         // These two vectors are the only things that aren't based on transform.up. Fix this maybe?
         _forward = new Vector3(Pivot.transform.forward.x, 0f, Pivot.transform.forward.z).normalized;
         _right = new Vector3(Pivot.right.x, 0f, Pivot.right.z).normalized;
+        _offset = Vector3.zero;
 
         Vector3 motionVelocity = RunSpeed * (_forward * vertical + _right * horizontal);
 
@@ -102,7 +96,6 @@ public class PlayerMotor : MonoBehaviour {
             // If not sliding, allow the player to jump
             } else if (jump) {
                 _gravityVelocity = JumpSpeed * transform.up;
-                _offset = Vector3.zero;
                 IsJumping = true;
             // If neither sliding nor jumping, cancel gravity entirely
             } else {
@@ -113,19 +106,14 @@ public class PlayerMotor : MonoBehaviour {
 
         } else {
             // If the top of the controller hits a platform, cancel its upward velocity
-            if (IsTouchingCeiling) {
+            float upwardSpeed = Vector3.Dot(motionVelocity + _gravityVelocity, transform.up);
+            if (IsTouchingCeiling && upwardSpeed > 0f) {
                 _ceilingAngle = Vector3.Angle(_ceilingNormal, -transform.up);
-                
-                // Check if we aleady canceled the upward velocity.  This makes up for the CollionFlags.Above being true for more than one frame.
-                if (!_didCeilingCancelJump) {
-                    if (_ceilingAngle < (float)CeilingBumpAngle) {
-                        _didCeilingCancelJump = true;
-                        _gravityVelocity = Vector3.zero;
-                    }
+                // Check if we aleady canceled the upward speed.  This makes up for the CollisionFlags.Above being true for more than one frame.
+                if (_ceilingAngle < CeilingBumpAngle) {
+                    _gravityVelocity = Vector3.zero;
+                    _offset = -_characterController.stepOffset * transform.up;
                 }
-            // If there is no collision on the top of the controller, and the ceiling was hit in a previous frame, release it from the upward velocity reset
-            } else if (_didCeilingCancelJump) {
-                _didCeilingCancelJump = false;
             }
 
             _gravityVelocity -= Gravity * transform.up;
@@ -152,13 +140,6 @@ public class PlayerMotor : MonoBehaviour {
                 _ceilingNormal = _platformNormal;
             }
         }
-
-
-        DebugIsGrounded = _characterController.isGrounded;
-        DebugIsCeilingd = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
-        if (DebugIsCeilingd) {
-            Debug.Log("Ceilingd");
-        }
     }
 
     void OnDrawGizmos() {
@@ -172,6 +153,9 @@ public class PlayerMotor : MonoBehaviour {
 
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + _velocity);
+
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawLine(feet, feet + _downhill);
 
         Gizmos.color = _characterSkinGizmoColor;
         float skinRadius = _characterController.radius + _characterController.skinWidth;

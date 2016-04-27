@@ -40,7 +40,7 @@ public class CameraAim : MonoBehaviour {
         } else {
             AimingTransform.rotation = ViewTransform.rotation;
         }
-	}
+    }
 
     void OnDrawGizmos() {
         if (IntersectionFound) {

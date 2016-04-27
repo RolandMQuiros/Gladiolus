@@ -2,7 +2,7 @@
 using System.Collections;
 
 public class LedgeGrabber : MonoBehaviour {
-    public Rigidbody LedgeDetectionVolume;
+    public Collider LedgeDetector;
 
 	// Use this for initialization
 	void Awake () {
