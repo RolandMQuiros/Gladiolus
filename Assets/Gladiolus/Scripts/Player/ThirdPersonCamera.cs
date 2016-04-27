@@ -58,9 +58,6 @@ public class ThirdPersonCamera : MonoBehaviour {
     }
 
     void OnDrawGizmos() {
-        Gizmos.color = Color.blue;
-        Gizmos.DrawLine(Pivot.position, _castPosition);
-
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(_obstructionPoint, 0.1f);
     }

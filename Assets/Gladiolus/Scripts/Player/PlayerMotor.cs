@@ -14,6 +14,9 @@ public class PlayerMotor : MonoBehaviour {
 
     public LayerMask PlatformLayers;
 
+    //[HideInInspector]
+    public bool IsJumping;
+
     private CharacterController _characterController;
 
     private Vector3 _forward;
@@ -21,8 +24,7 @@ public class PlayerMotor : MonoBehaviour {
 
     public Vector3 _velocity;
     public Vector3 _offset;
-
-    public Vector3 _jumpingVelocity;
+    
     public Vector3 _gravityVelocity;
 
     /// <summary>The normal of any Platform the character controller collides with</summary>
@@ -38,8 +40,21 @@ public class PlayerMotor : MonoBehaviour {
     /// <summary>The angle of the ceiling, in degrees</summary>
     public float _ceilingAngle;
 
+    /// <summary>Whether or not the top of the character controller is in contact with an object in the PlatformLayers mask</summary>
+    public bool IsTouchingCeiling = false;
+    /// <summary>Whether or not the bottom of the character controller is in contact with an object in the PlatformLayers mask</summary>
+    public bool IsTouchingFloor = false;
+    /// <summary>Whether or not the side of the character controller is in contact with an object in the PlatformLayers mask</summary>
+    public bool IsTouchingWall = false;
+
+    /// <summary>When the controller hits a ceiling, this flags whether or not it already canceled any upward velocity.  Makes sure the cancellation only happens in a single frame.</summary>
+    public bool _didCeilingCancelJump = false;
+    public bool _isTouchingPlatform = false;
+
+    private Color _characterSkinGizmoColor = new Color(0.2f, 0.8f, 0.3f);
+
     public bool DebugIsGrounded;
-    public CollisionFlags DebugCollisionFlags;
+    public bool DebugIsCeilingd;
 
 	void OnEnable() {
         _characterController = GetComponent<CharacterController>();
@@ -58,19 +73,15 @@ public class PlayerMotor : MonoBehaviour {
         Move(horizontal, vertical, jump);
     }
 
+    void LateUpdate() {
+        _characterController.Move(_velocity * Time.deltaTime + _offset);
+    }
+
     void OnControllerColliderHit(ControllerColliderHit hit) {
-        bool isPlatform = (PlatformLayers.value & (1 << hit.gameObject.layer)) != 0;
-        bool hitBelow = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
-        bool hitAbove = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
-
-        if (isPlatform) {
-            if (hitBelow) {
-                _floorNormal = hit.normal;
-                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
-            } else if (hitAbove) {
-                _ceilingNormal = hit.normal;
-            }
-
+        // Note: CollisionFlags aren't updated at the point OnControllerColliderHit is called, so
+        // assigning the IsTouching variables here leads to inconsistent behavior
+        _isTouchingPlatform = (PlatformLayers.value & (1 << hit.gameObject.layer)) != 0;
+        if (_isTouchingPlatform) {
             _platformNormal = hit.normal;
         }
     }
@@ -92,22 +103,32 @@ public class PlayerMotor : MonoBehaviour {
             } else if (jump) {
                 _gravityVelocity = JumpSpeed * transform.up;
                 _offset = Vector3.zero;
+                IsJumping = true;
             // If neither sliding nor jumping, cancel gravity entirely
             } else {
                 _gravityVelocity = Vector3.zero;
                 _offset = -_characterController.stepOffset * transform.up; // Push controller into ground to trigger proper isGrounded behavior
+                IsJumping = false;
             }
 
         } else {
-            if ((_characterController.collisionFlags & CollisionFlags.Above) != 0) {
+            // If the top of the controller hits a platform, cancel its upward velocity
+            if (IsTouchingCeiling) {
                 _ceilingAngle = Vector3.Angle(_ceilingNormal, -transform.up);
-                if (_ceilingAngle < CeilingBumpAngle) {
-                    _gravityVelocity = Vector3.zero;
+                
+                // Check if we aleady canceled the upward velocity.  This makes up for the CollionFlags.Above being true for more than one frame.
+                if (!_didCeilingCancelJump) {
+                    if (_ceilingAngle < (float)CeilingBumpAngle) {
+                        _didCeilingCancelJump = true;
+                        _gravityVelocity = Vector3.zero;
+                    }
                 }
+            // If there is no collision on the top of the controller, and the ceiling was hit in a previous frame, release it from the upward velocity reset
+            } else if (_didCeilingCancelJump) {
+                _didCeilingCancelJump = false;
             }
 
             _gravityVelocity -= Gravity * transform.up;
-
         }
 
         _velocity = motionVelocity + _gravityVelocity;
@@ -117,10 +138,27 @@ public class PlayerMotor : MonoBehaviour {
             _velocity = Vector3.ProjectOnPlane(_velocity, _platformNormal);
         }
 
-        DebugIsGrounded = _characterController.isGrounded;
-        DebugCollisionFlags = _characterController.collisionFlags;
-
         _characterController.Move(_velocity * Time.deltaTime + _offset);
+
+        if (_isTouchingPlatform) {
+            IsTouchingFloor = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
+            IsTouchingCeiling = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+            IsTouchingWall = (_characterController.collisionFlags & CollisionFlags.Sides) != 0;
+
+            if (IsTouchingFloor) {
+                _floorNormal = _platformNormal;
+                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
+            } else if (IsTouchingCeiling) {
+                _ceilingNormal = _platformNormal;
+            }
+        }
+
+
+        DebugIsGrounded = _characterController.isGrounded;
+        DebugIsCeilingd = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+        if (DebugIsCeilingd) {
+            Debug.Log("Ceilingd");
+        }
     }
 
     void OnDrawGizmos() {
@@ -135,7 +173,9 @@ public class PlayerMotor : MonoBehaviour {
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + _velocity);
 
-        Gizmos.color = Color.green;
-        Gizmos.DrawLine(feet, feet + _downhill);
+        Gizmos.color = _characterSkinGizmoColor;
+        float skinRadius = _characterController.radius + _characterController.skinWidth;
+        Gizmos.DrawWireSphere(transform.position + (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
+        Gizmos.DrawWireSphere(transform.position - (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
     }
 }
