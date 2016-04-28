@@ -157,9 +157,9 @@ public class PlayerMotor : MonoBehaviour {
         Gizmos.color = Color.magenta;
         Gizmos.DrawLine(feet, feet + _downhill);
 
-        Gizmos.color = _characterSkinGizmoColor;
-        float skinRadius = _characterController.radius + _characterController.skinWidth;
-        Gizmos.DrawWireSphere(transform.position + (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
-        Gizmos.DrawWireSphere(transform.position - (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
+        //Gizmos.color = _characterSkinGizmoColor;
+        //float skinRadius = _characterController.radius + _characterController.skinWidth;
+        //Gizmos.DrawWireSphere(transform.position + (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
+        //Gizmos.DrawWireSphere(transform.position - (_characterController.height / 2f - _characterController.radius) * Vector3.up, skinRadius);
     }
 }

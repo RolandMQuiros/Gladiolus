@@ -50,7 +50,6 @@ public class ThirdPersonCamera : MonoBehaviour {
         if (Physics.Linecast(Pivot.position, _castPosition, out hitInfo, ObstructionLayer.value)) {
             Camera.position = hitInfo.point;
             _obstructionPoint = hitInfo.point;
-            Debug.Log("hit!");
         } else {
             Camera.localPosition = _initialOffset;
             _obstructionPoint = Camera.position;
