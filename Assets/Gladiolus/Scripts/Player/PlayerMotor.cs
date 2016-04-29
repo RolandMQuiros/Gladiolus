@@ -12,6 +12,8 @@ public class PlayerMotor : MonoBehaviour {
     public int SlideAngle = 60;
     public int CeilingBumpAngle = 25;
 
+    public Transform Transverse;
+
     public LayerMask PlatformLayers;
 
     //[HideInInspector]
@@ -24,7 +26,8 @@ public class PlayerMotor : MonoBehaviour {
 
     public Vector3 _velocity;
     public Vector3 _offset;
-    
+
+    private Vector3 _motionVelocity;
     public Vector3 _gravityVelocity;
 
     /// <summary>The normal of any Platform the character controller collides with</summary>
@@ -67,7 +70,32 @@ public class PlayerMotor : MonoBehaviour {
         float vertical = Input.GetAxis("Vertical");
         bool jump = Input.GetButtonDown("Jump");
 
-        Move(horizontal, vertical, jump);
+        MoveByInput(horizontal, vertical, jump);
+    }
+
+    void FixedUpdate() {
+        _characterController.Move(_velocity * Time.deltaTime + _offset);
+
+        if (Transverse && _motionVelocity != Vector3.zero) {
+            Vector3 transverseDirection = Vector3.ProjectOnPlane(_motionVelocity.normalized, transform.up);
+            Transverse.rotation = Quaternion.Lerp(Transverse.rotation, Quaternion.LookRotation(transverseDirection), 5f * Time.deltaTime);
+        }
+
+        _offset = Vector3.zero;
+        _velocity = Vector3.zero;
+
+        if (_isTouchingPlatform) {
+            IsTouchingFloor = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
+            IsTouchingCeiling = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+            IsTouchingWall = (_characterController.collisionFlags & CollisionFlags.Sides) != 0;
+
+            if (IsTouchingFloor) {
+                _floorNormal = _platformNormal;
+                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
+            } else if (IsTouchingCeiling) {
+                _ceilingNormal = _platformNormal;
+            }
+        }
     }
 
     void OnControllerColliderHit(ControllerColliderHit hit) {
@@ -79,13 +107,11 @@ public class PlayerMotor : MonoBehaviour {
         }
     }
 
-    public void Move(float horizontal, float vertical, bool jump) {
-        // These two vectors are the only things that aren't based on transform.up. Fix this maybe?
-        _forward = new Vector3(Pivot.transform.forward.x, 0f, Pivot.transform.forward.z).normalized;
-        _right = new Vector3(Pivot.right.x, 0f, Pivot.right.z).normalized;
-        _offset = Vector3.zero;
+    public void MoveByInput(float horizontal, float vertical, bool jump) {
+        _forward = Vector3.ProjectOnPlane(Pivot.transform.forward, transform.up);
+        _right = Vector3.ProjectOnPlane(Pivot.transform.right, transform.up);
 
-        Vector3 motionVelocity = RunSpeed * (_forward * vertical + _right * horizontal);
+        _motionVelocity = RunSpeed * (_forward * vertical + _right * horizontal);
 
         if (_characterController.isGrounded) {
 
@@ -100,45 +126,30 @@ public class PlayerMotor : MonoBehaviour {
             // If neither sliding nor jumping, cancel gravity entirely
             } else {
                 _gravityVelocity = Vector3.zero;
-                _offset = -_characterController.stepOffset * transform.up; // Push controller into ground to trigger proper isGrounded behavior
+                _offset += -_characterController.stepOffset * transform.up; // Push controller into ground to trigger proper isGrounded behavior
                 IsJumping = false;
             }
 
         } else {
             // If the top of the controller hits a platform, cancel its upward velocity
-            float upwardSpeed = Vector3.Dot(motionVelocity + _gravityVelocity, transform.up);
+            float upwardSpeed = Vector3.Dot(_motionVelocity + _gravityVelocity, transform.up);
             if (IsTouchingCeiling && upwardSpeed > 0f) {
                 _ceilingAngle = Vector3.Angle(_ceilingNormal, -transform.up);
                 // Check if we aleady canceled the upward speed.  This makes up for the CollisionFlags.Above being true for more than one frame.
                 if (_ceilingAngle < CeilingBumpAngle) {
                     _gravityVelocity = Vector3.zero;
-                    _offset = -_characterController.stepOffset * transform.up;
+                    _offset += -_characterController.stepOffset * transform.up;
                 }
             }
 
-            _gravityVelocity -= Gravity * transform.up;
+            _gravityVelocity -= Gravity * Time.deltaTime * transform.up;
         }
 
-        _velocity = motionVelocity + _gravityVelocity;
+        _velocity += _motionVelocity + _gravityVelocity;
 
         bool isHit = _characterController.collisionFlags != 0;
         if (isHit) {
             _velocity = Vector3.ProjectOnPlane(_velocity, _platformNormal);
-        }
-
-        _characterController.Move(_velocity * Time.deltaTime + _offset);
-
-        if (_isTouchingPlatform) {
-            IsTouchingFloor = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
-            IsTouchingCeiling = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
-            IsTouchingWall = (_characterController.collisionFlags & CollisionFlags.Sides) != 0;
-
-            if (IsTouchingFloor) {
-                _floorNormal = _platformNormal;
-                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
-            } else if (IsTouchingCeiling) {
-                _ceilingNormal = _platformNormal;
-            }
         }
     }
 
