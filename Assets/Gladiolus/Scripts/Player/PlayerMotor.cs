@@ -5,6 +5,7 @@ using System.Collections;
 public class PlayerMotor : MonoBehaviour {
     public Transform Pivot;
 
+    public float Mass = 1f;
     public float RunSpeed = 10f;
     public float WalkSpeed = 10f;
     public float JumpSpeed = 100f;
@@ -73,31 +74,6 @@ public class PlayerMotor : MonoBehaviour {
         MoveByInput(horizontal, vertical, jump);
     }
 
-    void FixedUpdate() {
-        _characterController.Move(_velocity * Time.deltaTime + _offset);
-
-        if (Transverse && _motionVelocity != Vector3.zero) {
-            Vector3 transverseDirection = Vector3.ProjectOnPlane(_motionVelocity.normalized, transform.up);
-            Transverse.rotation = Quaternion.Lerp(Transverse.rotation, Quaternion.LookRotation(transverseDirection), 5f * Time.deltaTime);
-        }
-
-        _offset = Vector3.zero;
-        _velocity = Vector3.zero;
-
-        if (_isTouchingPlatform) {
-            IsTouchingFloor = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
-            IsTouchingCeiling = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
-            IsTouchingWall = (_characterController.collisionFlags & CollisionFlags.Sides) != 0;
-
-            if (IsTouchingFloor) {
-                _floorNormal = _platformNormal;
-                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
-            } else if (IsTouchingCeiling) {
-                _ceilingNormal = _platformNormal;
-            }
-        }
-    }
-
     void OnControllerColliderHit(ControllerColliderHit hit) {
         // Note: CollisionFlags aren't updated at the point OnControllerColliderHit is called, so
         // assigning the IsTouching variables here leads to inconsistent behavior
@@ -118,7 +94,7 @@ public class PlayerMotor : MonoBehaviour {
             // The floor is greater than a given angle, slide down it
             _floorAngle = Vector3.Angle(_floorNormal, transform.up);
             if (_floorAngle > SlideAngle) {
-                _gravityVelocity += Gravity * _downhill;
+                _gravityVelocity += Gravity * Time.deltaTime * _downhill;
             // If not sliding, allow the player to jump
             } else if (jump) {
                 _gravityVelocity = JumpSpeed * transform.up;
@@ -150,6 +126,29 @@ public class PlayerMotor : MonoBehaviour {
         bool isHit = _characterController.collisionFlags != 0;
         if (isHit) {
             _velocity = Vector3.ProjectOnPlane(_velocity, _platformNormal);
+        }
+
+        _characterController.Move(_velocity * Time.deltaTime + _offset);
+
+        if (Transverse && _motionVelocity != Vector3.zero) {
+            Vector3 transverseDirection = Vector3.ProjectOnPlane(_motionVelocity.normalized, transform.up);
+            Transverse.rotation = Quaternion.Lerp(Transverse.rotation, Quaternion.LookRotation(transverseDirection), 5f * Time.deltaTime);
+        }
+
+        _offset = Vector3.zero;
+        _velocity = Vector3.zero;
+
+        if (_isTouchingPlatform) {
+            IsTouchingFloor = (_characterController.collisionFlags & CollisionFlags.Below) != 0;
+            IsTouchingCeiling = (_characterController.collisionFlags & CollisionFlags.Above) != 0;
+            IsTouchingWall = (_characterController.collisionFlags & CollisionFlags.Sides) != 0;
+
+            if (IsTouchingFloor) {
+                _floorNormal = _platformNormal;
+                _downhill = Vector3.Cross(_floorNormal, Vector3.Cross(_floorNormal, transform.up)).normalized;
+            } else if (IsTouchingCeiling) {
+                _ceilingNormal = _platformNormal;
+            }
         }
     }
 

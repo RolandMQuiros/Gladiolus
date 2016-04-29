@@ -69,7 +69,9 @@ public class LedgeDetector : MonoBehaviour {
 
                 // Cast from ledge cast point and find ledge line
                 Vector3 start = transform.position + LedgeCastHeight * transform.up;
-                if (Physics.SphereCast(start, LedgeCastRadius, -transform.up, out hitInfo, PlatformLayers)) {
+
+                IsolationLayer.Isolate(other.gameObject);
+                if (Physics.SphereCast(start, LedgeCastRadius, -transform.up, out hitInfo, IsolationLayer.MASK)) {
                     _ledgePlane.SetNormalAndPosition(hitInfo.normal, hitInfo.point);
                     _ledgePoint = hitInfo.point;
                     _ledgeNormal = hitInfo.normal;
@@ -80,6 +82,7 @@ public class LedgeDetector : MonoBehaviour {
                         
                     }
                 }
+                IsolationLayer.Clear();
             }
         }    
     }
