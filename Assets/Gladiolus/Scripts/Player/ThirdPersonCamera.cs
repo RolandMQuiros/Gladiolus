@@ -13,51 +13,51 @@ public class ThirdPersonCamera : MonoBehaviour {
     public float VerticalLimit = 60f;
     public float ObstructionPadding = 0.01f;
 
-    public LayerMask ObstructionLayer;
+    public LayerMask ObstructionMask;
 
-    private float _mouseDeltaX;
-    private float _mouseDeltaY;
+    private float m_mouseDeltaX;
+    private float m_mouseDeltaY;
 
-    private float _rotationX;
-    private float _rotationY;
+    private float m_rotationX;
+    private float m_rotationY;
 
-    private Vector3 _initialOffset;
-    private Vector3 _castPosition;
-    private Vector3 _obstructionPoint;
+    private Vector3 m_initialOffset;
+    private Vector3 m_castPosition;
+    private Vector3 m_obstructionPoint;
 
     void Start() {
         //Cursor.visible = false;
-        _initialOffset = Camera.localPosition;
+        m_initialOffset = Camera.localPosition;
     }
 
 	// Update is called once per frame
 	void Update () {
         //Cursor.lockState = CursorLockMode.Locked;
         // Rotate the camera using mouse input
-        _mouseDeltaX = Input.GetAxis(INPUT_VIEW_X) * SensitivityX * Time.deltaTime;
-        _mouseDeltaY = Input.GetAxis(INPUT_VIEW_Y) * SensitivityY * Time.deltaTime;
+        m_mouseDeltaX = Input.GetAxis(INPUT_VIEW_X) * SensitivityX * Time.deltaTime;
+        m_mouseDeltaY = Input.GetAxis(INPUT_VIEW_Y) * SensitivityY * Time.deltaTime;
         
-        if (_mouseDeltaX != 0f || _mouseDeltaY != 0f) {
-            _rotationX += _mouseDeltaX;
-            _rotationY -= _mouseDeltaY;
-            _rotationY = Mathf.Clamp(_rotationY, -VerticalLimit, VerticalLimit);
+        if (m_mouseDeltaX != 0f || m_mouseDeltaY != 0f) {
+            m_rotationX += m_mouseDeltaX;
+            m_rotationY -= m_mouseDeltaY;
+            m_rotationY = Mathf.Clamp(m_rotationY, -VerticalLimit, VerticalLimit);
 
-            Pivot.rotation = Quaternion.Euler(_rotationY, _rotationX, 0f);
+            Pivot.rotation = Quaternion.Euler(m_rotationY, m_rotationX, 0f);
         }
 
         RaycastHit hitInfo;
-        _castPosition = Pivot.TransformPoint(_initialOffset);
-        if (Physics.Linecast(Pivot.position, _castPosition, out hitInfo, ObstructionLayer.value)) {
+        m_castPosition = Pivot.TransformPoint(m_initialOffset);
+        if (Physics.Linecast(Pivot.position, m_castPosition, out hitInfo, ObstructionMask.value)) {
             Camera.position = hitInfo.point;
-            _obstructionPoint = hitInfo.point;
+            m_obstructionPoint = hitInfo.point;
         } else {
-            Camera.localPosition = _initialOffset;
-            _obstructionPoint = Camera.position;
+            Camera.localPosition = m_initialOffset;
+            m_obstructionPoint = Camera.position;
         }
     }
 
     void OnDrawGizmos() {
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(_obstructionPoint, 0.1f);
+        Gizmos.DrawSphere(m_obstructionPoint, 0.1f);
     }
 }

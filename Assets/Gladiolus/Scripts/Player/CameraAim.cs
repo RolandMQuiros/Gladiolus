@@ -3,16 +3,16 @@ using System.Collections;
 
 public class CameraAim : MonoBehaviour {
 
+    public Vector3 Forward;
     public Transform ViewTransform;
     public Transform AimingTransform;
     public LayerMask AimLayers;
+
     public bool IntersectionFound;
+    public Vector3 HitPoint;
 
-    private Vector3 _hitPoint;
-    private Vector3 _direction;
-
-	// Use this for initialization
-	void Awake () {
+    // Use this for initialization
+    void Awake () {
         
 	}
 	
@@ -33,10 +33,10 @@ public class CameraAim : MonoBehaviour {
         RaycastHit hitInfo;
         if (IntersectionFound = Physics.Raycast(startCastPoint, ViewTransform.forward, out hitInfo)) {
             // Make this object rotate its aiming transform towards the point of contact
-            _hitPoint = hitInfo.point;
-            _direction = _hitPoint - AimingTransform.position;
+            HitPoint = hitInfo.point;
+            Forward = HitPoint - AimingTransform.position;
 
-            AimingTransform.rotation = Quaternion.LookRotation(_direction, AimingTransform.up);
+            AimingTransform.rotation = Quaternion.LookRotation(Forward, AimingTransform.up);
         } else {
             AimingTransform.rotation = ViewTransform.rotation;
         }
@@ -45,10 +45,12 @@ public class CameraAim : MonoBehaviour {
     void OnDrawGizmos() {
         if (IntersectionFound) {
             Gizmos.color = Color.red;
-            Gizmos.DrawSphere(_hitPoint, 0.25f);
+            Gizmos.DrawSphere(HitPoint, 0.25f);
         }
 
         Gizmos.color = Color.green;
         Gizmos.DrawLine(ViewTransform.position, 100f * ViewTransform.forward);
+
+        Gizmos.DrawLine(ViewTransform.position, transform.position);
     }
 }

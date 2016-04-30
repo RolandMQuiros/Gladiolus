@@ -2,72 +2,78 @@
 using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(CapsuleCollider))]
+[RequireComponent(typeof(SphereCollider))]
 public class EntityMotor : MonoBehaviour {
-    public float GROUND_CAST_DISTANCE = 0.1f;
+    public float GROUND_CAST_START = -0.1f;
+    public float GROUND_CAST_DISTANCE = 0.15f;
 
-    public Vector3 Gravity = new Vector3(0f, -9.81f, 0f);
-    public float JumpForce = 400f;
+    public Vector3 Gravity = new Vector3(0f, -20f, 0f);
+
     public LayerMask GroundMask;
+    public float GroundCheckSkin = 0.1f;
+
+    public PhysicMaterial AirborneMaterial;
+    public PhysicMaterial GroundedMaterial;
 
     public bool IsGrounded;
     public Vector3 GroundNormal;
 
-    public float test_runspeed = 8f;
-
     private Rigidbody m_rigidbody;
-    private CapsuleCollider m_collider;
+    private SphereCollider m_collider;
 
-    // Use this for initialization
+    //private Vector3 m_gravity = new Vector3(0f, -20f, 0f);
+    private Vector3 m_gravityNormal;
+    private Vector3 m_collisionNormal;
+    private float m_groundAngle;
+    private bool m_canJump = false;
+    
     void Awake() {
         m_rigidbody = GetComponent<Rigidbody>();
-        m_collider = GetComponent<CapsuleCollider>();
-    }
+        m_collider = GetComponent<SphereCollider>();
 
-    void Update() {
-        Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
-        Move(test_runspeed * move, Input.GetButtonDown("Jump"));
+        m_gravityNormal = Gravity.normalized;
     }
 
     void FixedUpdate() {
-        m_rigidbody.AddForce(Gravity);
+        m_rigidbody.AddForce(Gravity, ForceMode.Acceleration);
         GroundCheck();
     }
 
     void GroundCheck() {
         RaycastHit hitInfo;
-        Vector3 gravityNormal = Gravity.normalized;
+        Ray groundCast = new Ray(transform.position + m_collider.center, m_gravityNormal);
 
-        float maxDistance = Vector3.Dot(m_rigidbody.velocity, gravityNormal);
-        Debug.DrawLine(
-            transform.position - GROUND_CAST_DISTANCE * gravityNormal, 
-            transform.position + maxDistance * gravityNormal, 
-            Color.red
-        );
-
-        Ray groundCast = new Ray(transform.position - GROUND_CAST_DISTANCE * gravityNormal, gravityNormal);
-
-        if (IsGrounded = Physics.Raycast(groundCast, out hitInfo, 1f, GroundMask.value)) {
+        if (Physics.SphereCast(groundCast, m_collider.radius - GroundCheckSkin, out hitInfo, 10f, GroundMask.value)) {
             GroundNormal = hitInfo.normal;
-            Debug.DrawLine(transform.position, transform.position + hitInfo.normal, Color.cyan);
+            IsGrounded = hitInfo.distance < GROUND_CAST_DISTANCE;
         } else {
-            GroundNormal = Gravity.normalized;
+            GroundNormal = -m_gravityNormal;
+            IsGrounded = false;
+        }
+
+        if (IsGrounded) {
+            m_collider.material = GroundedMaterial;
+        } else {
+            m_collider.material = AirborneMaterial;
         }
     }
 
-    public void Move(Vector3 velocity, bool jump) {
-        Vector3 gravityDirection = Gravity.normalized;
+    public void Move(Vector3 velocity, Vector3 jumpForce) {
         if (velocity != Vector3.zero) {
-            // Remove old movement velocity
-            Vector3 movementVelocity = Vector3.ProjectOnPlane(m_rigidbody.velocity, GroundNormal);
+            Vector3 movementVelocity = Vector3.ProjectOnPlane(m_rigidbody.velocity, m_gravityNormal);
             Vector3 nonmovementVelocity = m_rigidbody.velocity - movementVelocity;
-            Vector3 newMovementVelocity = Vector3.ProjectOnPlane(velocity, GroundNormal);
+            Vector3 newMovementVelocity = Vector3.ProjectOnPlane(velocity, m_gravityNormal);
 
-            m_rigidbody.velocity = nonmovementVelocity + newMovementVelocity;
+            m_rigidbody.velocity = newMovementVelocity + nonmovementVelocity;
         }
 
-        if (jump && IsGrounded) {
-            m_rigidbody.AddForce(-JumpForce * gravityDirection);
+        if (IsGrounded && jumpForce != Vector3.zero) {
+            IsGrounded = false;
+            m_rigidbody.AddForce(jumpForce);
         }
+    }
+
+    void OnDrawGizmos() {
+        Gizmos.color = Color.cyan;
     }
 }
